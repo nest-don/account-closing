@@ -456,7 +456,15 @@ class AccountCutoff(models.Model):
                 "prepaid_revenue": ("out_invoice", "out_refund"),
                 "prepaid_expense": ("in_invoice", "in_refund"),
             }
-            min_date = self.cutoff_date - relativedelta(days=self.picking_interval_days)
+
+            if self.cutoff_date:
+                cutoff_date = self.cutoff_date
+            else:
+                cutoff_date = self._default_cutoff_date()
+
+#            min_date = self.cutoff_date - relativedelta(days=self.picking_interval_days)
+            min_date = cutoff_date - relativedelta(days=self.picking_interval_days)
+
             inv_domain = [
                 ("move_type", "in", move_type_map[cutoff_type]),
                 ("date", "<=", self.cutoff_date),
@@ -487,7 +495,10 @@ class AccountCutoff(models.Model):
 
     def _get_cutoff_datetime(self):
         self.ensure_one()
-        cutoff_date = datetime.combine(self.cutoff_date, datetime.max.time())
+        if self.cutoff_date:
+            cutoff_date = datetime.combine(self.cutoff_date, datetime.max.time())
+        else:
+            cutoff_date = datetime.combine(self._default_cutoff_date(), datetime.max.time())
         tz = self.env.user.tz and pytz.timezone(self.env.user.tz) or pytz.utc
         cutoff_datetime_aware = tz.localize(cutoff_date)
         cutoff_datetime_utc = cutoff_datetime_aware.astimezone(pytz.utc)
